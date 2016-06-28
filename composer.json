@@ -1,6 +1,8 @@
 {
     "name": "webtown-php/deployer-bundle",
     "description": "Deployer php generator",
+    "homepage": "https://github.com/webtown-php/deployer-bundle",
+    "license": "MIT",
     "version": "0.1.0",
     "require": {
         "deployer/deployer": "~3.0",
@@ -14,7 +16,7 @@
     ],
     "autoload": {
         "psr-4": {
-            ":vendor\\:package_name\\": "src"
+            "WebtownPhp\\DeployerBundle\\": "src"
         }
     }
 }
