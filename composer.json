@@ -11,5 +11,10 @@
             "name": "Zoltan Feher",
             "email": "whitezo@webtown.hu"
         }
-    ]
+    ],
+    "autoload": {
+        "psr-4": {
+            ":vendor\\:package_name\\": "src"
+        }
+    }
 }
