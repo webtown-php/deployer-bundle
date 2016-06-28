@@ -1,6 +1,7 @@
 {
     "name": "webtown-php/deployer-bundle",
     "description": "Deployer php generator",
+    "version": "0.1.0",
     "require": {
         "deployer/deployer": "~3.0",
         "symfony/yaml": "^3.1"
