@@ -1,0 +1,14 @@
+{
+    "name": "webtown-php/deployer-bundle",
+    "description": "Deployer php generator",
+    "require": {
+        "deployer/deployer": "~3.0",
+        "symfony/yaml": "^3.1"
+    },
+    "authors": [
+        {
+            "name": "Zoltan Feher",
+            "email": "whitezo@webtown.hu"
+        }
+    ]
+}

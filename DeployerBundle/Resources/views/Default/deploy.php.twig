@@ -1,0 +1,115 @@
+<?php
+
+// All Deployer recipes are based on `recipe/common.php`.
+require 'vendor/deployer/deployer/recipe/symfony.php';
+
+env('gulp_ready', true);
+env('patches', []);
+
+// Define a server for deployment.
+// Let's name it "prod" and use port 22.
+{% for server in servers %}
+server('{{ server.name }}', '{{ server.host }}', {{ server.port }})
+    ->user('{{ server.user }}')
+    {% if server.password is empty -%}
+    ->forwardAgent() // You can use identity key, ssh config, or username/password to auth on the server.
+    {% else -%}
+    ->password('{{ server.password }}')
+    {% endif -%}
+    ->stage('{{ server.stage }}')
+    ->env('deploy_path', '{{ server.deploy_path }}') // Define the base path to deploy your project to.
+    ->env('bin/php', '/usr/local/php/php5.6/bin/php')
+    ->env('bin/composer', '/usr/local/php/php5.6/bin/php /usr/local/bin/composer')
+    ->env('patches', ['app/config/deployer/matogrosso-htaccess.patch'])
+    ->env('gulp_ready', false);
+{% endfor %}
+
+{% verbatim %}
+// Specify the repository from which to download your project's code.
+// The server needs to have git installed for this to work.
+// If you're not using a forward agent, then the server has to be able to clone
+// your project from this repository.
+set('repository', '{{ repository }}');
+
+// Symfony shared files
+set('shared_files', ['app/config/parameters.yml', 'app/config/nodejs_parameters.yml']);
+set('shared_dirs', ['app/logs', 'web/uploads']);
+set('writable_dirs', ['app/cache', 'app/logs', 'web/uploads']);
+set('writable_use_sudo', false);
+
+/**
+* Init parameters.yml
+*/
+task('deploy:init-parameters-yml', function () {
+
+$composerConfigString = run('cat {{release_path}}/composer.json');
+if ($composerConfigString->toString()) {
+$composerConfig = json_decode($composerConfigString, true);
+$distFiles = isset($composerConfig['extra']['incenteev-parameters'])
+? $composerConfig['extra']['incenteev-parameters']
+: []
+;
+
+foreach ($distFiles as $distFile) {
+env('config_yml_path', '{{release_path}}/' . $distFile['file']);
+
+$result = run('if [[ -f {{config_yml_path}} && ! -s {{config_yml_path}} ]] ; then echo "1" ; else echo "0" ; fi');
+if ($result->toString() == '1') {
+writeln(sprintf('Set the `%s` config file parameters', $distFile['file']));
+$ymlParser = new \Symfony\Component\Yaml\Parser();
+$parameters = $ymlParser->parse((string) run('cat {{config_yml_path}}.dist'));
+$newParameters = [];
+foreach ($parameters['parameters'] as $key => $default) {
+$value = ask($key, $default);
+$newParameters[$key] = $value;
+}
+$ymlDumper = new \Symfony\Component\Yaml\Dumper();
+$content = $ymlDumper->dump(['parameters' => $newParameters], 2);
+run("cat << EOYAML > {{config_yml_path}}\n$content\nEOYAML");
+}
+}
+}
+
+})->desc('Initialize `parameters.yml`');
+before('deploy:vendors', 'deploy:init-parameters-yml');
+
+task('deploy:gulp-build', function () {
+run('cd {{release_path}} && bundle install --path vendor/bundle');
+run('cd {{release_path}} && npm install');
+run('cd {{release_path}} && bower install');
+/** @see `info:gulp` task */
+if (env('gulp_ready')) {
+run('cd {{release_path}} && gulp build');
+run('rm -rf /tmp/gulp-ruby-sass/');
+}
+})->desc('Install environment (Bundler, NPM, Bower)');
+after('deploy:assetic:dump', 'deploy:gulp-build');
+
+task('run:patches', function() {
+foreach (env('patches') as $patch) {
+run(sprintf('cd {{release_path}} && git apply %s', $patch));
+}
+})->desc('Run git patches');
+after('success', 'run:patches');
+
+task('info:gulp', function () {
+if (!env('gulp_ready')) {
+writeln('');
+writeln('===========================================================================================================');
+writeln('<comment>A <info>gulp build</info> parancsot nem tudjuk futtatni, mert vmiért elakad a program futása, miután lefutott. A probléma megoldása az, hogy azt kézzel kell futtatni, SSH-val belépve a szerverre!</comment>');
+writeln('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
+}
+});
+after('success', 'info:gulp');
+
+/**
+* Create database if not exists
+*/
+task('database:create', function () {
+    run('{{bin/php}} {{release_path}}/' . trim(get('bin_dir'), '/') . '/console doctrine:database:create --env={{env}} --no-debug --no-interaction --if-not-exists');
+})->desc('Initialize `parameters.yml`');
+before('database:migrate', 'database:create');
+after('deploy:vendors', 'database:migrate');
+
+// @todo (Chris) kuma:search:populate +
+{% endverbatim %}
