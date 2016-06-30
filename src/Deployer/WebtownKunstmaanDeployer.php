@@ -9,13 +9,13 @@
 namespace WebtownPhp\DeployerBundle\Deployer;
 
 
-use Sensio\Bundle\GeneratorBundle\Command\Helper\QuestionHelper;
+use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use WebtownPhp\DeployerBundle\Exception\ServerAddException;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Yaml\Yaml;
+use WebtownPhp\DeployerBundle\Exception\ServerAddException;
 
 class WebtownKunstmaanDeployer implements DeployerTemplateInterface
 {
@@ -56,7 +56,6 @@ class WebtownKunstmaanDeployer implements DeployerTemplateInterface
     public function __construct(\Twig_Environment $twig, \AppKernel $kernel)
     {
         $this->twig = $twig;
-        $this->questionHelper = new QuestionHelper();
         $this->kernel = $kernel;
         $this->rootDir = realpath($this->kernel->getRootDir().'/..');
     }
@@ -76,10 +75,10 @@ class WebtownKunstmaanDeployer implements DeployerTemplateInterface
      */
     public function generateTemplateContent(QuestionHelper $questionHelper, InputInterface $input, OutputInterface $output)
     {
+        $this->questionHelper = $questionHelper;
         $this->input = $input;
         $this->output = $output;
         $this->io = new SymfonyStyle($input, $output);
-        $this->questionHelper = $questionHelper;
 
         // get params
         $params = $this->getParams();
@@ -154,9 +153,8 @@ class WebtownKunstmaanDeployer implements DeployerTemplateInterface
                 $server['port'] = $this->ask('Port', '22');
                 $server['user'] = $this->ask('User');
 
-                $questionHelper = $this->getQuestionHelper();
-                $question = new Question($questionHelper->getQuestion('Password (leave empty for key auth.)', ''));
-                $server['password'] = $questionHelper->ask($this->input, $this->output, $question);
+                $question = $this->getQuestion('Password (leave empty for key auth.)', '');
+                $server['password'] = $this->getQuestionHelper()->ask($this->input, $this->output, $question);
 
                 $server['stage'] = $this->ask('Stage');
                 $server['deploy_path'] = $this->ask('Deploy path');
@@ -181,10 +179,9 @@ class WebtownKunstmaanDeployer implements DeployerTemplateInterface
      */
     protected function ask($question, $default = '', callable $validator = null)
     {
-        $questionHelper = $this->getQuestionHelper();
-        $question = new Question($questionHelper->getQuestion($question, $default), $default);
+        $question = $this->getQuestion($question, $default);
         $question->setValidator($validator);
-        $ret = $questionHelper->ask($this->input, $this->output, $question);
+        $ret = $this->getQuestionHelper()->ask($this->input, $this->output, $question);
 
         // break input sequence if value is empty
         if (empty($ret)) {
@@ -195,7 +192,7 @@ class WebtownKunstmaanDeployer implements DeployerTemplateInterface
     }
 
     /**
-     * @return QuestionHelper|\Symfony\Component\Console\Helper\HelperInterface
+     * @return QuestionHelper
      */
     protected function getQuestionHelper()
     {
@@ -208,5 +205,19 @@ class WebtownKunstmaanDeployer implements DeployerTemplateInterface
     protected function getRootDir()
     {
         return $this->rootDir;
+    }
+
+    /**
+     * @param $question
+     * @param $default
+     * @param string $sep
+     *
+     * @return Question
+     */
+    public function getQuestion($question, $default, $sep = ':')
+    {
+        return new Question($default ?
+            sprintf('<info>%s</info> [<comment>%s</comment>]%s ', $question, $default, $sep) :
+            sprintf('<info>%s</info>%s ', $question, $sep));
     }
 }

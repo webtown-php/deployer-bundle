@@ -9,7 +9,7 @@
 namespace WebtownPhp\DeployerBundle\Deployer;
 
 
-use Sensio\Bundle\GeneratorBundle\Command\Helper\QuestionHelper;
+use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
