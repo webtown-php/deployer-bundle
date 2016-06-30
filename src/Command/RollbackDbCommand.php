@@ -26,6 +26,7 @@ class RollbackDbCommand extends ContainerAwareCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $output->writeln('Starting rollback');
         $projectRoot = realpath($this->getContainer()->get('kernel')->getRootDir().'/..');
 
         $prevRoot = $this->getPrevRoot($projectRoot);
@@ -40,13 +41,17 @@ class RollbackDbCommand extends ContainerAwareCommand
         // run each execute command
         $command = $this->getApplication()->find('doctrine:migrations:execute');
         foreach ($diff as $item) {
+            $output->writeln('Rolling back: '.$item);
             $arguments = array(
                 'command' => 'doctrine:migrations:execute',
                 'version' => $item,
                 '--down'  => true,
-                '-n'      => true,
             );
-            $command->run(new ArrayInput($arguments), new NullOutput());
+            $in = new ArrayInput($arguments);
+            if ($input->hasParameterOption(array('--no-interaction', '-n'))) {
+                $in->setInteractive(false);
+            }
+            $command->run($in, $output);
         }
     }
 
