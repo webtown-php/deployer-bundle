@@ -63,7 +63,7 @@ class RollbackDbCommand extends ContainerAwareCommand
 
         $finder = new Finder();
         foreach ($finder->files()->in($path)->depth('== 0')->sortByName() as $item) {
-            $ret[] = pathinfo($item->getRelativePathname(), PATHINFO_FILENAME);
+            $ret[] = preg_replace('/[^\d]+/', '', pathinfo($item->getRelativePathname(), PATHINFO_FILENAME));
         }
 
         return $ret;
