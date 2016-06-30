@@ -113,10 +113,12 @@ before('database:migrate', 'database:create');
 after('deploy:vendors', 'database:migrate');
 
 task('rollback:db', function () {
-
+    $current_path = str_replace('\n', '', run('readlink '.env('deploy_path').'/current'));
+    writeln('rollback db');
+    run('{{bin/php}} '.$current_path.'/' . trim(get('bin_dir'), '/') . '/console webtown:deployer:rollback-db --env={{env}} --no-interaction');
 });
 
-after('rollback', 'rollback:db');
+before('rollback', 'rollback:db');
 
 // @todo (Chris) kuma:search:populate +
 {% endverbatim %}
