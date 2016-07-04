@@ -1,7 +1,7 @@
 services:
     deployer.templates:
         class: WebtownPhp\DeployerBundle\Services\TemplateList
-    app.kuma.template_generator:
+    webtown_php.deployer.template_generator:
         class: WebtownPhp\DeployerBundle\Deployer\WebtownKunstmaanDeployer
         arguments: ["@twig", "@kernel"]
         tags:
